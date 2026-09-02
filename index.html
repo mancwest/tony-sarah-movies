@@ -472,7 +472,9 @@
 
 <div class="controls">
   <input type="text" id="search" placeholder="Search title...">
-  <div class="chip-row" id="decadeChips"></div>
+  <div class="chip-row" id="yearRow">
+    <select id="yearSelect"></select>
+  </div>
   <div class="chip-row" id="ratingChips"></div>
   <div class="chip-row" id="genreChips"></div>
   <div class="stats-row">
@@ -530,7 +532,7 @@ let watched = {};
 let favourites = {};
 let unwatchedOnly = false;
 let favouritesOnly = false;
-let activeDecade = "All";
+let activeYear = "All";
 let activeRating = "All";
 let activeGenre = "All";
 let searchTerm = "";
@@ -603,12 +605,6 @@ function toggleFavourite(id){
   saveState();
 }
 
-function decadeOf(y){
-  if(y < 2000) return "90s";
-  if(y < 2010) return "00s";
-  return "10s+";
-}
-
 function buildChips(container, options, active, onPick, xmasAware){
   container.innerHTML = '';
   options.forEach(opt=>{
@@ -620,11 +616,30 @@ function buildChips(container, options, active, onPick, xmasAware){
   });
 }
 
-function renderChips(){
-  const decades = ["All","90s","00s","10s+"];
-  buildChips(document.getElementById('decadeChips'), decades, activeDecade, (d)=>{
-    activeDecade = d; renderLimit = PAGE_SIZE; renderChips(); render();
+function renderYearSelect(){
+  const select = document.getElementById('yearSelect');
+  if(select.options.length > 0) return; // build once
+  const years = Array.from(new Set(MOVIES.map(m => m.y))).sort((a,b)=> b - a);
+  const optAll = document.createElement('option');
+  optAll.value = "All";
+  optAll.textContent = "All years";
+  select.appendChild(optAll);
+  years.forEach(y=>{
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    select.appendChild(opt);
   });
+  select.value = activeYear;
+  select.addEventListener('change', (e)=>{
+    activeYear = e.target.value;
+    renderLimit = PAGE_SIZE;
+    render();
+  });
+}
+
+function renderChips(){
+  renderYearSelect();
   const ratings = ["All","8+","7+","6+","5+"];
   buildChips(document.getElementById('ratingChips'), ratings, activeRating, (r)=>{
     activeRating = r; renderLimit = PAGE_SIZE; renderChips(); render();
@@ -716,7 +731,7 @@ function openSheet(m){
 
 function getFiltered(){
   let filtered = MOVIES.filter(m=>{
-    if(activeDecade !== "All" && decadeOf(m.y) !== activeDecade) return false;
+    if(activeYear !== "All" && String(m.y) !== activeYear) return false;
     if(activeRating !== "All"){
       const minRating = parseInt(activeRating);
       if(!m.r || m.r < minRating) return false;
